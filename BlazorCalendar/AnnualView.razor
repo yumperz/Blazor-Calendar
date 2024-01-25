@@ -135,11 +135,13 @@
                     }
                 }  
 
-                <div class=@($"cellule day-cellule noselect {disabled}") 
-                     style="@CSSbackground" 
-                     ondragover="@ondragover" 
+                <div class=@($"cellule day-cellule noselect {disabled}")
+                     style="@CSSbackground"
+                     ondragover="@ondragover"
                      @ondrop="() => HandleDayOnDrop(j)" 
-                     @ondrop:preventDefault="true">
+                     @ondrop:preventDefault="true"
+                     @ondragenter="() => HandleDayOnDragEnter(j)"
+                     @ondragenter:preventDefault="true">
                     <div class="day" style="@CSSbackground">
                         @labelDay
                     </div>
@@ -148,6 +150,7 @@
                          style="@taskColor" 
                          title="@taskComment" 
                          @onclick="e => ClickInternal(e, j)" 
+                         @onmousedown="e => MouseDownInternal(e, j)"
                          @ondragstart="() => HandleDragStart(j, taskID)"
                          draggable="@draggable.ToString()" >
                         @taskContent

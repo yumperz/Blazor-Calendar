@@ -53,11 +53,20 @@ partial class AnnualView : CalendarBase
     [Parameter]
     public EventCallback<ClickEmptyDayParameter> EmptyDayClick { get; set; }
 
-    [Parameter]
+	[Parameter]
+	public EventCallback<ClickTaskParameter> TaskMouseDown { get; set; }
+
+	[Parameter]
+	public EventCallback<ClickEmptyDayParameter> EmptyDayMouseDown { get; set; }
+
+	[Parameter]
     public EventCallback<DragDropParameter> DragStart { get; set; }
 
     [Parameter]
     public EventCallback<DragDropParameter> DropTask { get; set; }
+
+    [Parameter]
+    public EventCallback<DragDropParameter> DragEnterTask { get; set; }
 
     [Parameter]
     public EventCallback<DateTime> HeaderClick { get; set; }
@@ -118,23 +127,90 @@ partial class AnnualView : CalendarBase
         }
     }
 
-    private async Task HandleDragStart(DateTime day, int taskID) 
+	private async Task MouseDownInternal(MouseEventArgs e, DateTime day)
+	{
+		if (day == default)
+			return;
+
+		// There can be several tasks in one day :
+		List<int> listID = new();
+
+		if (TasksList is not null)
+		{
+			for (var k = 0; k < TasksList.Length; k++)
+			{
+				Tasks t = TasksList[k];
+
+				if (t.DateStart.Date <= day.Date && day.Date <= t.DateEnd.Date)
+				{
+					listID.Add(t.ID);
+				}
+			}
+		}
+
+		if (listID.Any())
+		{
+			if (TaskClick.HasDelegate)
+			{
+				ClickTaskParameter clickTaskParameter = new()
+				{
+					IDList = listID,
+					X = e.ClientX,
+					Y = e.ClientY,
+					Day = day
+				};
+
+				await TaskMouseDown.InvokeAsync(clickTaskParameter);
+			}
+		}
+		else
+		{
+			if (EmptyDayClick.HasDelegate)
+			{
+
+				ClickEmptyDayParameter clickEmptyDayParameter = new()
+				{
+					Day = day,
+					X = e.ClientX,
+					Y = e.ClientY
+				};
+
+				await EmptyDayMouseDown.InvokeAsync(clickEmptyDayParameter);
+			}
+		}
+	}
+
+	private async Task HandleDragStart(DateTime day, int taskID) 
     {
         if (taskID < 0) 
             return;
 
-        TaskDragged = new Tasks()
+        TaskDragged = TasksList?.FirstOrDefault(t => t.ID == taskID);
+
+        if (TaskDragged != null)
         {
-            ID = taskID
-        };
+            DragDropParameter dragDropParameter = new()
+            {
+                Day = day,
+                taskID = TaskDragged.ID
+            };
+
+			await DragStart.InvokeAsync(dragDropParameter);
+        }
+    }
+
+    private async Task HandleDayOnDragEnter(DateTime day)
+    {
+        if( TaskDragged is null)
+            return;
 
         DragDropParameter dragDropParameter = new()
         {
             Day = day,
             taskID = TaskDragged.ID
-        };
+		};
 
-        await DragStart.InvokeAsync(dragDropParameter);
+        await DragEnterTask.InvokeAsync(dragDropParameter);
     }
 
     private async Task HandleDayOnDrop(DateTime day)
@@ -146,9 +222,9 @@ partial class AnnualView : CalendarBase
         {
             Day = day,
             taskID = TaskDragged.ID
-        };
+		};
 
-        await DropTask.InvokeAsync(dragDropParameter);
+		await DropTask.InvokeAsync(dragDropParameter);
 
         TaskDragged = null;
     }
