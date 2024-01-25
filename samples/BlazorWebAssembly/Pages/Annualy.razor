@@ -22,11 +22,11 @@
 
 
 <CalendarContainer FirstDate="today" TasksList="TasksList.ToArray()"  DisplayedView="DisplayedView.Annual" >
-	<AnnualView Months="months" Style="height:80vh"  
+	<AnnualView Months="months" Style="height:80vh"
 				PriorityDisplay="@PriorityDisplay"
 				HeaderClick="HeaderClick"
-				TaskClick="TaskClick" EmptyDayClick="EmptyDayClick"
-				Draggable="@draggable" DragStart="DragStart" DropTask="DropTask" />
+				TaskClick="TaskClick" EmptyDayClick="EmptyDayClick" EmptyDayMouseDown="EmptyDayMouseDown"
+				Draggable="@draggable" DragStart="DragStart" DropTask="DropTask" DragEnterTask="DragEnterTask"/>
 </CalendarContainer>
 
 
@@ -40,17 +40,21 @@
 	private string fakeConsole = "";
 	private BlazorCalendar.PriorityLabel PriorityDisplay = PriorityLabel.Code;
 	private bool draggable = true;
-
+	private int currentMaxID = 0;
+	private int GetNextID()
+	{
+		return ++currentMaxID;
+	}
 	protected override void OnInitialized()
 	{
 		TasksList = new()
 		{
-			new Tasks { ID = 1, DateStart = today.AddDays(8), DateEnd = today.AddDays(8), Code = "CP", Color = "#19C319", Caption = "Lorem ipsum dolor sit amet", FillStyle=BlazorCalendar.FillStyleEnum.CrossDots },
-			new Tasks { ID = 2, DateStart = today.AddDays(50), DateEnd = today.AddDays(52), Code = "DEV", Color = "#FFD800", Comment="on Teams template", Caption = "Fusce quis purus eu ante", FillStyle=BlazorCalendar.FillStyleEnum.ZigZag },
-			new Tasks { ID = 3, DateStart = today.AddDays(40), DateEnd = today.AddDays(41), Code = "FORM", Color = "#FFC3FF", ForeColor = "#FF0000", Caption = "Lorem ipsum dolor sit amet" },
-			new Tasks { ID = 4, DateStart = today.AddDays(62), DateEnd = today.AddDays(62), Code = "DEV", Color = "#FFD800" },
-			new Tasks { ID = 5, DateStart = today.AddDays(62), DateEnd = today.AddDays(62), Code = "FORM", Color = "#FFC3FF", Caption = "Ut sit amet turpis eget" } ,
-			new Tasks { ID = 6, DateStart = today.AddDays(73).AddHours(8), DateEnd = today.AddDays(73).AddHours(9), Code = "MEETING", Color = "#2DD7D7", Comment="Julien's test" }
+			new Tasks { ID = GetNextID(), DateStart = today.AddDays(8), DateEnd = today.AddDays(8), Code = "CP", Color = "#19C319", Caption = "Lorem ipsum dolor sit amet", FillStyle=BlazorCalendar.FillStyleEnum.CrossDots },
+			new Tasks { ID = GetNextID(), DateStart = today.AddDays(50), DateEnd = today.AddDays(52), Code = "DEV", Color = "#FFD800", Comment="on Teams template", Caption = "Fusce quis purus eu ante", FillStyle=BlazorCalendar.FillStyleEnum.ZigZag },
+			new Tasks { ID = GetNextID(), DateStart = today.AddDays(40), DateEnd = today.AddDays(41), Code = "FORM", Color = "#FFC3FF", ForeColor = "#FF0000", Caption = "Lorem ipsum dolor sit amet" },
+			new Tasks { ID = GetNextID(), DateStart = today.AddDays(62), DateEnd = today.AddDays(62), Code = "DEV", Color = "#FFD800" },
+			new Tasks { ID = GetNextID(), DateStart = today.AddDays(62), DateEnd = today.AddDays(62), Code = "FORM", Color = "#FFC3FF", Caption = "Ut sit amet turpis eget" } ,
+			new Tasks { ID = GetNextID(), DateStart = today.AddDays(73).AddHours(8), DateEnd = today.AddDays(73).AddHours(9), Code = "MEETING", Color = "#2DD7D7", Comment="Julien's test" }
 		};
 	}
 
@@ -66,9 +70,9 @@
 	}
 
 	private void ClicMonthNavigate(int monthToAdd)
-    {
-        today = today.AddMonths(monthToAdd);
-    }
+	{
+		today = today.AddMonths(monthToAdd);
+	}
 
 	private void TaskClick(ClickTaskParameter clickTaskParameter)
 	{
@@ -78,21 +82,64 @@
 	private void EmptyDayClick(ClickEmptyDayParameter clickEmptyDayParameter)
 	{
 		fakeConsole = "Empty day :" + clickEmptyDayParameter.Day.ToShortDateString();
+		if(!isDragging)
+			isNewEntry = false;
 	}
 
+	private void EmptyDayMouseDown(ClickEmptyDayParameter clickEmptyDayParameter)
+	{
+		fakeConsole = "Empty day :" + clickEmptyDayParameter.Day.ToShortDateString();
+		isNewEntry = true;
+
+		var task = new Tasks { ID = GetNextID(), DateStart = clickEmptyDayParameter.Day, DateEnd = clickEmptyDayParameter.Day, Code = "DEV", Color = "#FFD800" };
+		TasksList.Add(task);
+	}
+
+	#region Drag & Drop
+	bool isNewEntry = false;
+	bool isDragging = false;
+	DateTime dragStartedDay;
+	Tasks taskDragged;
 	private void DragStart(DragDropParameter dragDropParameter)
 	{	 
-		fakeConsole = $"DragStart event :{dragDropParameter.Day.ToShortDateString()} {dragDropParameter.taskID}";
-	}  
+		isDragging = true;
+		dragStartedDay = dragDropParameter.Day;
+		taskDragged = TasksList.FirstOrDefault(t => t.ID == dragDropParameter.taskID);
+	}
+
+	private void DragEnterTask(DragDropParameter dragDropParameter)
+	{
+		fakeConsole = $"DragEnter event :{dragDropParameter.Day.ToShortDateString()} {dragDropParameter.taskID}";
+
+		if (isNewEntry)
+		{
+			if (taskDragged != null)
+			{
+				if (dragDropParameter.Day > dragStartedDay)
+				{
+					taskDragged.DateStart = dragStartedDay;
+					taskDragged.DateEnd = dragDropParameter.Day;
+				}
+				else
+				{
+					taskDragged.DateEnd = dragStartedDay;
+					taskDragged.DateStart = dragDropParameter.Day;
+				}
+			}
+		}
+	}
 
 	private void DropTask(DragDropParameter dragDropParameter)
 	{													 
 		fakeConsole = $"DropTask event :{dragDropParameter.Day.ToShortDateString()} {dragDropParameter.taskID}";
 
-		Tasks taskDropped = TasksList.FirstOrDefault(t => t.ID == dragDropParameter.taskID);
-
-		var TotalDay = (taskDropped.DateEnd - taskDropped.DateStart).TotalDays;
-		taskDropped.DateEnd = dragDropParameter.Day.AddDays(TotalDay);
-		taskDropped.DateStart = dragDropParameter.Day;
+		isDragging = false;
+		if( !isNewEntry ) {
+			var TotalDay = (taskDragged.DateEnd - taskDragged.DateStart).TotalDays;
+			taskDragged.DateEnd = dragDropParameter.Day.AddDays(TotalDay);
+			taskDragged.DateStart = dragDropParameter.Day;
+		}
+		isNewEntry = false;
 	}
+	#endregion Drag & Drop
 }
