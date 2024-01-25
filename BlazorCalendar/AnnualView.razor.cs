@@ -39,7 +39,7 @@ partial class AnnualView : CalendarBase
             _firstdate = value;
         }
     }
-    
+
     [CascadingParameter(Name = "TasksList")]
     public Tasks[]? TasksList { get; set; }
 
@@ -53,13 +53,13 @@ partial class AnnualView : CalendarBase
     [Parameter]
     public EventCallback<ClickEmptyDayParameter> EmptyDayClick { get; set; }
 
-	[Parameter]
-	public EventCallback<ClickTaskParameter> TaskMouseDown { get; set; }
+    [Parameter]
+    public EventCallback<ClickTaskParameter> TaskMouseDown { get; set; }
 
-	[Parameter]
-	public EventCallback<ClickEmptyDayParameter> EmptyDayMouseDown { get; set; }
+    [Parameter]
+    public EventCallback<ClickEmptyDayParameter> EmptyDayMouseDown { get; set; }
 
-	[Parameter]
+    [Parameter]
     public EventCallback<DragDropParameter> DragStart { get; set; }
 
     [Parameter]
@@ -76,13 +76,13 @@ partial class AnnualView : CalendarBase
 
     private async Task ClickInternal(MouseEventArgs e, DateTime day)
     {
-        if (day == default) 
+        if (day == default)
             return;
 
         // There can be several tasks in one day :
         List<int> listID = new();
 
-        if (TasksList is not null )
+        if (TasksList is not null)
         {
             for (var k = 0; k < TasksList.Length; k++)
             {
@@ -98,91 +98,91 @@ partial class AnnualView : CalendarBase
         if (listID.Any())
         {
             if (TaskClick.HasDelegate)
-			{
-				ClickTaskParameter clickTaskParameter = new()
-				{
-					IDList = listID,
-					X = e.ClientX,
-					Y = e.ClientY,
-					Day = day
-				};
+            {
+                ClickTaskParameter clickTaskParameter = new()
+                {
+                    IDList = listID,
+                    X = e.ClientX,
+                    Y = e.ClientY,
+                    Day = day
+                };
 
-				await TaskClick.InvokeAsync(clickTaskParameter);
-			}
+                await TaskClick.InvokeAsync(clickTaskParameter);
+            }
         }
         else
         {
             if (EmptyDayClick.HasDelegate)
             {
 
-				ClickEmptyDayParameter clickEmptyDayParameter = new()
-				{
-					Day = day,
-					X = e.ClientX,
-					Y = e.ClientY
-				};
+                ClickEmptyDayParameter clickEmptyDayParameter = new()
+                {
+                    Day = day,
+                    X = e.ClientX,
+                    Y = e.ClientY
+                };
 
-				await EmptyDayClick.InvokeAsync(clickEmptyDayParameter);
-			}
+                await EmptyDayClick.InvokeAsync(clickEmptyDayParameter);
+            }
         }
     }
 
-	private async Task MouseDownInternal(MouseEventArgs e, DateTime day)
-	{
-		if (day == default)
-			return;
-
-		// There can be several tasks in one day :
-		List<int> listID = new();
-
-		if (TasksList is not null)
-		{
-			for (var k = 0; k < TasksList.Length; k++)
-			{
-				Tasks t = TasksList[k];
-
-				if (t.DateStart.Date <= day.Date && day.Date <= t.DateEnd.Date)
-				{
-					listID.Add(t.ID);
-				}
-			}
-		}
-
-		if (listID.Any())
-		{
-			if (TaskClick.HasDelegate)
-			{
-				ClickTaskParameter clickTaskParameter = new()
-				{
-					IDList = listID,
-					X = e.ClientX,
-					Y = e.ClientY,
-					Day = day
-				};
-
-				await TaskMouseDown.InvokeAsync(clickTaskParameter);
-			}
-		}
-		else
-		{
-			if (EmptyDayClick.HasDelegate)
-			{
-
-				ClickEmptyDayParameter clickEmptyDayParameter = new()
-				{
-					Day = day,
-					X = e.ClientX,
-					Y = e.ClientY
-				};
-
-				await EmptyDayMouseDown.InvokeAsync(clickEmptyDayParameter);
-			}
-		}
-	}
-
-	private async Task HandleDragStart(DateTime day, int taskID) 
+    private async Task MouseDownInternal(MouseEventArgs e, DateTime day)
     {
-        if (taskID < 0) 
+        if (day == default)
+            return;
+
+        // There can be several tasks in one day :
+        List<int> listID = new();
+
+        if (TasksList is not null)
+        {
+            for (var k = 0; k < TasksList.Length; k++)
+            {
+                Tasks t = TasksList[k];
+
+                if (t.DateStart.Date <= day.Date && day.Date <= t.DateEnd.Date)
+                {
+                    listID.Add(t.ID);
+                }
+            }
+        }
+
+        if (listID.Any())
+        {
+            if (TaskClick.HasDelegate)
+            {
+                ClickTaskParameter clickTaskParameter = new()
+                {
+                    IDList = listID,
+                    X = e.ClientX,
+                    Y = e.ClientY,
+                    Day = day
+                };
+
+                await TaskMouseDown.InvokeAsync(clickTaskParameter);
+            }
+        }
+        else
+        {
+            if (EmptyDayClick.HasDelegate)
+            {
+
+                ClickEmptyDayParameter clickEmptyDayParameter = new()
+                {
+                    Day = day,
+                    X = e.ClientX,
+                    Y = e.ClientY
+                };
+
+                await EmptyDayMouseDown.InvokeAsync(clickEmptyDayParameter);
+            }
+        }
+    }
+
+    private async Task HandleDragStart(DateTime day, int taskID)
+    {
+        if (taskID < 0)
             return;
 
         TaskDragged = TasksList?.FirstOrDefault(t => t.ID == taskID);
@@ -195,43 +195,43 @@ partial class AnnualView : CalendarBase
                 taskID = TaskDragged.ID
             };
 
-			await DragStart.InvokeAsync(dragDropParameter);
+            await DragStart.InvokeAsync(dragDropParameter);
         }
     }
 
     private async Task HandleDayOnDragEnter(DateTime day)
     {
-        if( TaskDragged is null)
+        if (TaskDragged is null)
             return;
 
         DragDropParameter dragDropParameter = new()
         {
             Day = day,
             taskID = TaskDragged.ID
-		};
+        };
 
         await DragEnterTask.InvokeAsync(dragDropParameter);
     }
 
     private async Task HandleDayOnDrop(DateTime day)
     {
-        if (TaskDragged is null) 
+        if (TaskDragged is null)
             return;
 
         DragDropParameter dragDropParameter = new()
         {
             Day = day,
             taskID = TaskDragged.ID
-		};
+        };
 
-		await DropTask.InvokeAsync(dragDropParameter);
+        await DropTask.InvokeAsync(dragDropParameter);
 
         TaskDragged = null;
     }
 
     private async Task HandleHeaderClick(DateTime month)
     {
-        if (!HeaderClick.HasDelegate) 
+        if (!HeaderClick.HasDelegate)
             return;
 
         await HeaderClick.InvokeAsync(month);
